@@ -671,6 +671,168 @@ async function saveDonationStatus(donationId) {
     }
 }
 
+async function editInventoryItem(index) {
+    if (!userCamp) {
+        showAlert('No camp assigned', 'danger');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/inventory/${userCamp._id}`);
+        const inventory = await response.json();
+        const items = inventory.items || [];
+        const item = items[index];
+
+        if (!item) {
+            showAlert('Item not found', 'danger');
+            return;
+        }
+
+        const modalHtml = `
+            <div class="modal fade" id="editItemModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Edit Inventory Item</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="editItemForm">
+                                <div class="mb-3">
+                                    <label for="editItemName" class="form-label">Item Name</label>
+                                    <input type="text" class="form-control" id="editItemName" value="${item.name}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="editItemQuantity" class="form-label">Quantity</label>
+                                    <input type="number" class="form-control" id="editItemQuantity" value="${item.quantity}" min="0" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="editItemUnit" class="form-label">Unit</label>
+                                    <input type="text" class="form-control" id="editItemUnit" value="${item.unit}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="editItemCategory" class="form-label">Category</label>
+                                    <input type="text" class="form-control" id="editItemCategory" value="${item.category}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="editMinThreshold" class="form-label">Minimum Threshold</label>
+                                    <input type="number" class="form-control" id="editMinThreshold" value="${item.minThreshold}" min="0" required>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" onclick="saveInventoryEdit(${index})">Save Changes</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Remove existing modal if any
+        const existingModal = document.getElementById('editItemModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Add new modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Show the modal
+        const modal = new bootstrap.Modal(document.getElementById('editItemModal'));
+        modal.show();
+    } catch (error) {
+        console.error('Error loading item details:', error);
+        showAlert('Error loading item details', 'danger');
+    }
+}
+
+async function saveInventoryEdit(index) {
+    if (!userCamp) {
+        showAlert('No camp assigned', 'danger');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/inventory/${userCamp._id}`);
+        const inventory = await response.json();
+        const items = inventory.items || [];
+
+        // Update the item at the specified index
+        items[index] = {
+            name: document.getElementById('editItemName').value,
+            quantity: parseInt(document.getElementById('editItemQuantity').value),
+            unit: document.getElementById('editItemUnit').value,
+            category: document.getElementById('editItemCategory').value,
+            minThreshold: parseInt(document.getElementById('editMinThreshold').value)
+        };
+
+        // Save the updated inventory
+        const updateResponse = await fetch(`/api/inventory/${userCamp._id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ items })
+        });
+
+        if (updateResponse.ok) {
+            showAlert('Item updated successfully!', 'success');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editItemModal'));
+            modal.hide();
+            loadInventoryData();
+            loadOverviewData();
+        } else {
+            const data = await updateResponse.json();
+            showAlert(data.error || 'Failed to update item', 'danger');
+        }
+    } catch (error) {
+        console.error('Error updating inventory item:', error);
+        showAlert('Network error. Please try again.', 'danger');
+    }
+}
+
+async function removeInventoryItem(index) {
+    if (!userCamp) {
+        showAlert('No camp assigned', 'danger');
+        return;
+    }
+
+    if (!confirm('Are you sure you want to delete this item?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/inventory/${userCamp._id}`);
+        const inventory = await response.json();
+        const items = inventory.items || [];
+
+        // Remove the item at the specified index
+        items.splice(index, 1);
+
+        // Save the updated inventory
+        const updateResponse = await fetch(`/api/inventory/${userCamp._id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ items })
+        });
+
+        if (updateResponse.ok) {
+            showAlert('Item removed successfully!', 'success');
+            loadInventoryData();
+            loadOverviewData();
+        } else {
+            const data = await updateResponse.json();
+            showAlert(data.error || 'Failed to remove item', 'danger');
+        }
+    } catch (error) {
+        console.error('Error removing inventory item:', error);
+        showAlert('Network error. Please try again.', 'danger');
+    }
+}
+
 function showAlert(message, type = 'info') {
     const alertContainer = document.getElementById('alertContainer');
     alertContainer.innerHTML = `
