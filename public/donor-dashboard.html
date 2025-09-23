@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Donor Dashboard - ReliefHub</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="/">
+                <i class="fas fa-hands-helping me-2"></i>ReliefHub
+            </a>
+            <div class="d-flex align-items-center">
+                <span class="navbar-text me-3">
+                    <i class="fas fa-heart me-2"></i>
+                    <span id="userInfo">Donor</span>
+                </span>
+                <button class="btn btn-outline-light btn-sm" onclick="logout()">
+                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2">
+                <div class="list-group">
+                    <button class="list-group-item list-group-item-action active" data-section="overview">
+                        <i class="fas fa-tachometer-alt me-2"></i>Overview
+                    </button>
+                    <button class="list-group-item list-group-item-action" data-section="camps">
+                        <i class="fas fa-campground me-2"></i>Browse Camps
+                    </button>
+                    <button class="list-group-item list-group-item-action" data-section="donate">
+                        <i class="fas fa-gift me-2"></i>Make Donation
+                    </button>
+                    <button class="list-group-item list-group-item-action" data-section="donations">
+                        <i class="fas fa-history me-2"></i>My Donations
+                    </button>
+                    <button class="list-group-item list-group-item-action" data-section="track">
+                        <i class="fas fa-search me-2"></i>Track Donation
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10">
+                <div id="alertContainer"></div>
+
+                <!-- Overview Section -->
+                <div id="overview" class="section-content">
+                    <h2 class="mb-4">Donor Dashboard</h2>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-4 mb-3">
+                            <div class="stat-card">
+                                <div class="stat-number" id="totalDonations">0</div>
+                                <div>Total Donations</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="stat-card">
+                                <div class="stat-number" id="activeDonations">0</div>
+                                <div>Active Donations</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="stat-card">
+                                <div class="stat-number" id="deliveredDonations">0</div>
+                                <div>Delivered</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="card dashboard-card">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Recent Donations</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="recentDonations">Loading...</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card dashboard-card">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Urgent Requests</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="urgentRequests">Loading...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Camps Section -->
+                <div id="camps" class="section-content d-none">
+                    <h2 class="mb-4">Browse Relief Camps</h2>
+                    <div class="row" id="campsGrid">
+                        <div class="col-12 text-center">Loading camps...</div>
+                    </div>
+                </div>
+
+                <!-- Donate Section -->
+                <div id="donate" class="section-content d-none">
+                    <h2 class="mb-4">Make a Donation</h2>
+                    <div class="card dashboard-card">
+                        <div class="card-body">
+                            <form id="donationForm">
+                                <div class="mb-3">
+                                    <label for="donationCamp" class="form-label">Select Camp *</label>
+                                    <select class="form-control" id="donationCamp" required>
+                                        <option value="">Loading camps...</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="donationType" class="form-label">Donation Type *</label>
+                                    <select class="form-control" id="donationType" required>
+                                        <option value="">Select Type</option>
+                                        <option value="Food">Food</option>
+                                        <option value="Medical">Medical</option>
+                                        <option value="Clothing">Clothing</option>
+                                        <option value="Shelter">Shelter</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <label class="form-label">Items to Donate *</label>
+                                        <button type="button" class="btn btn-sm btn-secondary" onclick="addDonationItem()">
+                                            <i class="fas fa-plus me-1"></i>Add Item
+                                        </button>
+                                    </div>
+                                    <div id="donationItems">
+                                        <div class="donation-item-row row mb-2">
+                                            <div class="col-md-4">
+                                                <input type="text" class="form-control" placeholder="Item name" required>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <input type="number" class="form-control" placeholder="Quantity" min="1" required>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <input type="text" class="form-control" placeholder="Unit" required>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <button type="button" class="btn btn-danger btn-sm" onclick="removeDonationItem(this)">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="donationMessage" class="form-label">Message (Optional)</label>
+                                    <textarea class="form-control" id="donationMessage" rows="3" placeholder="Add a personal message..."></textarea>
+                                </div>
+
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-primary btn-lg">
+                                        <i class="fas fa-gift me-2"></i>Submit Donation
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Donations Section -->
+                <div id="donations" class="section-content d-none">
+                    <h2 class="mb-4">My Donations</h2>
+                    <div class="card dashboard-card">
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Tracking ID</th>
+                                            <th>Camp</th>
+                                            <th>Type</th>
+                                            <th>Status</th>
+                                            <th>Date</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="donationsTableBody">
+                                        <tr>
+                                            <td colspan="6" class="text-center">Loading donations...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Track Section -->
+                <div id="track" class="section-content d-none">
+                    <h2 class="mb-4">Track Donation</h2>
+                    <div class="card dashboard-card">
+                        <div class="card-body">
+                            <form id="trackingForm">
+                                <div class="mb-3">
+                                    <label for="trackingId" class="form-label">Enter Tracking ID</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="trackingId" placeholder="e.g., RH1234567890123">
+                                        <button class="btn btn-primary" type="submit">
+                                            <i class="fas fa-search me-2"></i>Track
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                            
+                            <div id="trackingResult" class="mt-4"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/donor-dashboard.js"></script>
+</body>
+</html>

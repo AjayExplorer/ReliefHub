@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReliefHub - Disaster Relief Donation Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="/">
+                <i class="fas fa-hands-helping me-2"></i>ReliefHub
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#about">About</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#features">Features</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="login">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="register">Register</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="row align-items-center min-vh-100">
+                <div class="col-lg-6">
+                    <h1 class="display-4 fw-bold mb-4">
+                        Managing Disaster Relief <span class="text-primary">Together</span>
+                    </h1>
+                    <p class="lead mb-4">
+                        ReliefHub is a comprehensive donation management system that connects disaster relief camps, 
+                        collectors, and donors to ensure efficient distribution of aid during emergencies.
+                    </p>
+                    <div class="d-flex gap-3 flex-wrap">
+                        <a href="register" class="btn btn-primary btn-lg">
+                            <i class="fas fa-user-plus me-2"></i>Start Donating
+                        </a>
+                        <a href="login" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-sign-in-alt me-2"></i>Login
+                        </a>
+                    </div>
+                </div>
+                <div class="col-lg-6 text-center">
+                    <div class="hero-image">
+                        <i class="fas fa-hands-helping text-primary" style="font-size: 15rem; opacity: 0.1;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="py-5 bg-light">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12 text-center mb-5">
+                    <h2 class="display-5 fw-bold">About ReliefHub</h2>
+                    <p class="lead">Streamlining disaster relief through technology</p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-lg-4 mb-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body text-center">
+                            <i class="fas fa-campground text-primary fs-1 mb-3"></i>
+                            <h4>Camp Management</h4>
+                            <p class="text-muted">Efficiently manage disaster relief camps, track capacity, and coordinate with officials.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4 mb-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body text-center">
+                            <i class="fas fa-boxes text-primary fs-1 mb-3"></i>
+                            <h4>Inventory Tracking</h4>
+                            <p class="text-muted">Real-time inventory management with low-stock alerts and automated tracking.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4 mb-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body text-center">
+                            <i class="fas fa-heart text-primary fs-1 mb-3"></i>
+                            <h4>Transparent Donations</h4>
+                            <p class="text-muted">Track donations from source to destination with complete transparency.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12 text-center mb-5">
+                    <h2 class="display-5 fw-bold">Key Features</h2>
+                    <p class="lead">Comprehensive tools for effective disaster relief management</p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="feature-box text-center">
+                        <i class="fas fa-users-cog text-primary fs-1 mb-3"></i>
+                        <h5>Role-Based Access</h5>
+                        <p class="text-muted">Separate dashboards for Collectors, Camp Officials, and Donors</p>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="feature-box text-center">
+                        <i class="fas fa-exclamation-triangle text-warning fs-1 mb-3"></i>
+                        <h5>Urgent Requests</h5>
+                        <p class="text-muted">Priority-based request system for emergency supplies</p>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="feature-box text-center">
+                        <i class="fas fa-shipping-fast text-success fs-1 mb-3"></i>
+                        <h5>Donation Tracking</h5>
+                        <p class="text-muted">Track donations in real-time from submission to delivery</p>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="feature-box text-center">
+                        <i class="fas fa-chart-bar text-info fs-1 mb-3"></i>
+                        <h5>Analytics Dashboard</h5>
+                        <p class="text-muted">Comprehensive reports and analytics for better decision making</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-5 bg-primary text-white">
+        <div class="container text-center">
+            <h2 class="display-5 fw-bold mb-4">Ready to Make a Difference?</h2>
+            <p class="lead mb-4">Join our platform and help us create a more efficient disaster relief system</p>
+            <a href="register" class="btn btn-light btn-lg me-3">
+                <i class="fas fa-user-plus me-2"></i>Register as Donor
+            </a>
+            <a href="login" class="btn btn-outline-light btn-lg">
+                <i class="fas fa-sign-in-alt me-2"></i>Login to Dashboard
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+        <div class="container text-center">
+            <p class="mb-0">&copy; 2024 ReliefHub. All rights reserved. | Built for disaster relief management</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
