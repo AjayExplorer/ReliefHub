@@ -147,13 +147,7 @@ async function loadOverviewData() {
                         ${request.items.map(item => `${item.quantity} ${item.unit} ${item.name}`).join(', ')}
                     </small>
                     <button class="btn btn-success btn-sm donation-btn" 
-                        onclick="event.stopPropagation(); handleOverviewDonation({
-                            id: '${request._id}',
-                            campId: '${request.campId._id}',
-                            campName: '${request.campId.campName}',
-                            type: '${request.type}',
-                            items: ${JSON.stringify(itemsList)}
-                        })">
+                        onclick="event.stopPropagation(); donateToCamp()">
                         <i class="fas fa-hand-holding-heart me-1"></i>Donate
                     </button>
                 </div>
@@ -560,7 +554,7 @@ async function handleUrgentRequestClick(requestId) {
         }
         
         // Otherwise, proceed with donation form
-        await donateToCamp(requestId);
+        await donateToCamp();
     } catch (error) {
         console.error('Error handling urgent request click:', error);
         showAlert('Error preparing donation form. Please try again.', 'danger');
@@ -589,7 +583,7 @@ async function loadUrgentRequests() {
                         <small class="text-muted d-block">Camp: ${request.campName}</small>
                         <small class="text-muted d-block">Need: ${request.quantity} ${request.unit}</small>
                     </div>
-                    <button class="btn btn-success btn-sm" onclick="donateToCamp('${request._id}')">
+                    <button class="btn btn-success btn-sm" onclick="donateToCamp()">
                         <i class="fas fa-hand-holding-heart me-1"></i>Donate
                     </button>
                 </div>
@@ -650,7 +644,7 @@ async function viewUrgentDetails() {
                                     <span class="badge bg-danger">Urgent</span>
                                 </td>
                                 <td>
-                                    <button class="btn btn-success btn-sm" onclick="donateToCamp('${request._id}')" data-request-id="${request._id}">
+                                    <button class="btn btn-success btn-sm" onclick="donateToCamp()" data-request-id="${request._id}">
                                         <i class="fas fa-hand-holding-heart me-1"></i>Donate Now
                                     </button>
                                 </td>
@@ -697,7 +691,7 @@ async function viewUrgentDetails() {
     }
 }
 
-async function donateToCamp(requestId) {
+async function donateToCamp() {
     try {
         // Close the modal if it's open
         const modalElement = document.getElementById('urgentDetailsModal');
@@ -708,69 +702,17 @@ async function donateToCamp(requestId) {
             }
         }
 
-        const response = await fetch(`/api/requests/${requestId}`);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const request = await response.json();
-
-        // Switch to donation section first
+        // Simply navigate to the Donate section
         switchSection('donate');
-        
+
         // Update the sidebar active state
         document.querySelectorAll('.list-group-item[data-section]').forEach(btn => btn.classList.remove('active'));
         document.querySelector('.list-group-item[data-section="donate"]').classList.add('active');
 
-        // Wait for the donation form to be loaded
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Get the items container and clear existing items
-        const itemsContainer = document.getElementById('donationItems');
-        itemsContainer.innerHTML = '';
-
-        // Add the item from the request
-        const itemRow = document.createElement('div');
-        itemRow.className = 'donation-item-row row mb-2';
-        itemRow.innerHTML = `
-            <div class="col-md-4">
-                <input type="text" class="form-control" placeholder="Item name" value="${request.itemName}" required>
-            </div>
-            <div class="col-md-3">
-                <input type="number" class="form-control" placeholder="Quantity" min="1" value="${request.quantity}" required>
-            </div>
-            <div class="col-md-3">
-                <input type="text" class="form-control" placeholder="Unit" value="${request.unit}" required>
-            </div>
-            <div class="col-md-2">
-                <button type="button" class="btn btn-danger btn-sm" onclick="removeDonationItem(this)">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-        `;
-        itemsContainer.appendChild(itemRow);
-
-        // Set the camp
-        document.getElementById('donationCamp').value = request.campId;
-        
-        // Set the donation type based on the item or request type
-        const donationType = document.getElementById('donationType');
-        if (donationType) {
-            donationType.value = request.type || 'Other';
-        }
-
-        // Add a message indicating this is an urgent request
-        const messageField = document.getElementById('donationMessage');
-        if (messageField) {
-            messageField.value = `Urgent request response - Request ID: ${request._id}`;
-        }
-        
-        // Scroll to donation form
+        // Scroll into view
         document.getElementById('donate').scrollIntoView({ behavior: 'smooth' });
-        
-        // Show helper message
-        showAlert('Donation form has been pre-filled based on the urgent request. Please review and submit.', 'info');
     } catch (error) {
-        console.error('Error preparing donation:', error);
-        showAlert('Error preparing donation form. Please try again.', 'danger');
+        console.error('Error navigating to donation form:', error);
+        showAlert('Unable to open donation form. Please try again.', 'danger');
     }
 }

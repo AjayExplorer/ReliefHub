@@ -109,6 +109,43 @@ router.post('/', [requireAuth, requireRole(['CampOfficial'])], [
   }
 });
 
+// Get single request by ID (for donors to prefill donation form)
+router.get('/:id', requireAuth, async (req, res) => {
+  try {
+    const request = await Request.findById(req.params.id)
+      .populate('campId', 'campName location');
+
+    if (!request) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+
+    // Return a simplified shape that the frontend expects
+    const firstItem = request.items && request.items.length > 0 ? request.items[0] : null;
+    const response = firstItem ? {
+      _id: request._id,
+      itemName: firstItem.name,
+      quantity: firstItem.quantity,
+      unit: firstItem.unit,
+      campId: request.campId._id,
+      campName: request.campId.campName,
+      type: request.type,
+      urgency: request.urgency
+    } : {
+      _id: request._id,
+      campId: request.campId._id,
+      campName: request.campId.campName,
+      type: request.type,
+      urgency: request.urgency,
+      items: request.items
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('Error fetching request:', error);
+    res.status(500).json({ error: 'Failed to fetch request' });
+  }
+});
+
 // Update request status (Collector only)
 router.put('/:id/status', [requireAuth, requireRole(['Collector'])], [
   body('status').isIn(['Pending', 'Approved', 'Fulfilled', 'Rejected']).withMessage('Valid status is required')
