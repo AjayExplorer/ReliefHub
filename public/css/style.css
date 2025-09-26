@@ -4,6 +4,27 @@ body {
     line-height: 1.6;
 }
 
+.urgent-request-card {
+    transition: all 0.3s ease;
+    border-radius: 6px;
+    padding: 10px;
+}
+
+.urgent-request-card:hover {
+    background-color: #f8f9fa;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.urgent-request-card .btn {
+    opacity: 0.9;
+    transition: opacity 0.3s ease;
+}
+
+.urgent-request-card:hover .btn {
+    opacity: 1;
+}
+
 .hero-section {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;

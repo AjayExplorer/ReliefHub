@@ -97,7 +97,8 @@ async function loadCamps() {
 
 async function loadOverviewData() {
     try {
-        // Load user's donations
+        // Load user's donations and urgent requests
+        await loadUrgentRequests();
         const donationsResponse = await fetch('/api/donations');
         const donations = await donationsResponse.json();
         
@@ -126,15 +127,39 @@ async function loadOverviewData() {
         
         // Display urgent requests
         const urgentRequests = requests.filter(r => r.urgency === 'Critical' || r.urgency === 'High').slice(0, 5);
-        const requestsHtml = urgentRequests.length > 0 ? urgentRequests.map(request => `
-            <div class="border-bottom pb-2 mb-2">
+        const requestsHtml = urgentRequests.length > 0 ? urgentRequests.map(request => {
+            // Format items for display
+            const itemsList = request.items.map(item => ({
+                name: item.name,
+                quantity: item.quantity,
+                unit: item.unit
+            }));
+            
+            return `
+            <div class="border-bottom pb-2 mb-2 urgent-request-card" style="cursor: pointer" onclick="handleUrgentRequestClick('${request._id}')">
                 <div class="d-flex justify-content-between align-items-center">
                     <strong>${request.title}</strong>
-                    <span class="urgency-${request.urgency.toLowerCase()}">${request.urgency}</span>
+                    <span class="badge bg-danger">${request.urgency}</span>
                 </div>
-                <small class="text-muted">${request.campId.campName} - ${request.type}</small>
+                <small class="text-muted d-block">${request.campId.campName} - ${request.type}</small>
+                <div class="mt-2 d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        ${request.items.map(item => `${item.quantity} ${item.unit} ${item.name}`).join(', ')}
+                    </small>
+                    <button class="btn btn-success btn-sm donation-btn" 
+                        onclick="event.stopPropagation(); handleOverviewDonation({
+                            id: '${request._id}',
+                            campId: '${request.campId._id}',
+                            campName: '${request.campId.campName}',
+                            type: '${request.type}',
+                            items: ${JSON.stringify(itemsList)}
+                        })">
+                        <i class="fas fa-hand-holding-heart me-1"></i>Donate
+                    </button>
+                </div>
             </div>
-        `).join('') : '<p class="text-muted">No urgent requests at this time</p>';
+        `;
+        }).join('') : '<p class="text-muted">No urgent requests at this time</p>';
         
         document.getElementById('urgentRequests').innerHTML = requestsHtml;
         
@@ -458,5 +483,294 @@ function showAlert(message, type = 'info') {
                 bsAlert.close();
             }
         }, 5000);
+    }
+}
+
+async function handleOverviewDonation(requestData) {
+    try {
+        // Switch to donation section first
+        switchSection('donate');
+        
+        // Update the sidebar active state
+        document.querySelectorAll('.list-group-item[data-section]').forEach(btn => btn.classList.remove('active'));
+        document.querySelector('.list-group-item[data-section="donate"]').classList.add('active');
+
+        // Wait for the donation form to be loaded
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Set the camp
+        document.getElementById('donationCamp').value = requestData.campId;
+
+        // Get the items container and clear existing items
+        const itemsContainer = document.getElementById('donationItems');
+        itemsContainer.innerHTML = '';
+
+        // Add each item from the request
+        requestData.items.forEach(item => {
+            const itemRow = document.createElement('div');
+            itemRow.className = 'donation-item-row row mb-2';
+            itemRow.innerHTML = `
+                <div class="col-md-4">
+                    <input type="text" class="form-control" placeholder="Item name" value="${item.name}" required>
+                </div>
+                <div class="col-md-3">
+                    <input type="number" class="form-control" placeholder="Quantity" min="1" value="${item.quantity}" required>
+                </div>
+                <div class="col-md-3">
+                    <input type="text" class="form-control" placeholder="Unit" value="${item.unit}" required>
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-danger btn-sm" onclick="removeDonationItem(this)">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            itemsContainer.appendChild(itemRow);
+        });
+        
+        // Set the donation type based on the request type
+        const donationType = document.getElementById('donationType');
+        if (donationType) {
+            donationType.value = requestData.type || 'Other';
+        }
+
+        // Add a message indicating this is from an urgent request
+        const messageField = document.getElementById('donationMessage');
+        if (messageField) {
+            messageField.value = `Urgent request response - Request ID: ${requestData.id}\nDonating to: ${requestData.campName}`;
+        }
+        
+        // Scroll to donation form
+        document.getElementById('donate').scrollIntoView({ behavior: 'smooth' });
+        
+        // Show helper message
+        showAlert('Donation form has been pre-filled based on the urgent request. Please review and submit.', 'info');
+    } catch (error) {
+        console.error('Error preparing donation:', error);
+        showAlert('Error preparing donation form. Please try again.', 'danger');
+    }
+}
+
+async function handleUrgentRequestClick(requestId) {
+    try {
+        // Check if the click was on the donate button
+        const target = event.target;
+        if (target.tagName === 'BUTTON' || target.closest('button')) {
+            return; // Let the button's own click handler handle it
+        }
+        
+        // Otherwise, proceed with donation form
+        await donateToCamp(requestId);
+    } catch (error) {
+        console.error('Error handling urgent request click:', error);
+        showAlert('Error preparing donation form. Please try again.', 'danger');
+    }
+}
+
+async function loadUrgentRequests() {
+    try {
+        const response = await fetch('/api/requests/urgent');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const urgentRequests = await response.json();
+        
+        const container = document.getElementById('urgentRequests');
+        if (!urgentRequests || urgentRequests.length === 0) {
+            container.innerHTML = '<p class="text-muted">No urgent requests at the moment.</p>';
+            return;
+        }
+
+        container.innerHTML = urgentRequests.map(request => `
+            <div class="urgent-request-item mb-2 p-2 border rounded">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>${request.itemName}</strong>
+                        <small class="text-muted d-block">Camp: ${request.campName}</small>
+                        <small class="text-muted d-block">Need: ${request.quantity} ${request.unit}</small>
+                    </div>
+                    <button class="btn btn-success btn-sm" onclick="donateToCamp('${request._id}')">
+                        <i class="fas fa-hand-holding-heart me-1"></i>Donate
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading urgent requests:', error);
+        showAlert('Error loading urgent requests. Please try again.', 'danger');
+    }
+}
+
+async function viewUrgentDetails() {
+    try {
+        const response = await fetch('/api/requests/urgent');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const urgentRequests = await response.json();
+        
+        // Remove any existing event listeners from old modals
+        const oldModal = document.getElementById('urgentDetailsModal');
+        if (oldModal) {
+            const oldModalInstance = bootstrap.Modal.getInstance(oldModal);
+            if (oldModalInstance) {
+                oldModalInstance.dispose();
+            }
+            oldModal.remove();
+        }
+        
+        const modalContent = urgentRequests.length === 0 ? 
+            '<p class="text-muted">No urgent requests at the moment.</p>' :
+            `<div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Item Name</th>
+                            <th>Camp</th>
+                            <th>Quantity Needed</th>
+                            <th>Priority</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${urgentRequests.map(request => `
+                            <tr>
+                                <td>
+                                    <strong>${request.itemName}</strong>
+                                    <small class="text-muted d-block">Type: ${request.type || 'General'}</small>
+                                </td>
+                                <td>
+                                    <span>${request.campName}</span>
+                                    ${request.location ? `<small class="text-muted d-block">${request.location}</small>` : ''}
+                                </td>
+                                <td>
+                                    <span class="badge bg-info text-dark">${request.quantity} ${request.unit}</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-danger">Urgent</span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-success btn-sm" onclick="donateToCamp('${request._id}')" data-request-id="${request._id}">
+                                        <i class="fas fa-hand-holding-heart me-1"></i>Donate Now
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>`;
+
+        const modalHtml = `
+            <div class="modal fade" id="urgentDetailsModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Urgent Requests Details</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            ${modalContent}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Remove existing modal if any
+        const existingModal = document.getElementById('urgentDetailsModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Add new modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Show the modal
+        const modal = new bootstrap.Modal(document.getElementById('urgentDetailsModal'));
+        modal.show();
+    } catch (error) {
+        console.error('Error loading urgent request details:', error);
+        showAlert('Error loading urgent request details. Please try again.', 'danger');
+    }
+}
+
+async function donateToCamp(requestId) {
+    try {
+        // Close the modal if it's open
+        const modalElement = document.getElementById('urgentDetailsModal');
+        if (modalElement) {
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) {
+                modal.hide();
+            }
+        }
+
+        const response = await fetch(`/api/requests/${requestId}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const request = await response.json();
+
+        // Switch to donation section first
+        switchSection('donate');
+        
+        // Update the sidebar active state
+        document.querySelectorAll('.list-group-item[data-section]').forEach(btn => btn.classList.remove('active'));
+        document.querySelector('.list-group-item[data-section="donate"]').classList.add('active');
+
+        // Wait for the donation form to be loaded
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Get the items container and clear existing items
+        const itemsContainer = document.getElementById('donationItems');
+        itemsContainer.innerHTML = '';
+
+        // Add the item from the request
+        const itemRow = document.createElement('div');
+        itemRow.className = 'donation-item-row row mb-2';
+        itemRow.innerHTML = `
+            <div class="col-md-4">
+                <input type="text" class="form-control" placeholder="Item name" value="${request.itemName}" required>
+            </div>
+            <div class="col-md-3">
+                <input type="number" class="form-control" placeholder="Quantity" min="1" value="${request.quantity}" required>
+            </div>
+            <div class="col-md-3">
+                <input type="text" class="form-control" placeholder="Unit" value="${request.unit}" required>
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn btn-danger btn-sm" onclick="removeDonationItem(this)">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+        itemsContainer.appendChild(itemRow);
+
+        // Set the camp
+        document.getElementById('donationCamp').value = request.campId;
+        
+        // Set the donation type based on the item or request type
+        const donationType = document.getElementById('donationType');
+        if (donationType) {
+            donationType.value = request.type || 'Other';
+        }
+
+        // Add a message indicating this is an urgent request
+        const messageField = document.getElementById('donationMessage');
+        if (messageField) {
+            messageField.value = `Urgent request response - Request ID: ${request._id}`;
+        }
+        
+        // Scroll to donation form
+        document.getElementById('donate').scrollIntoView({ behavior: 'smooth' });
+        
+        // Show helper message
+        showAlert('Donation form has been pre-filled based on the urgent request. Please review and submit.', 'info');
+    } catch (error) {
+        console.error('Error preparing donation:', error);
+        showAlert('Error preparing donation form. Please try again.', 'danger');
     }
 }

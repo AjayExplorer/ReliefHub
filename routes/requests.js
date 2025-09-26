@@ -6,6 +6,34 @@ const User = require('../models/User');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const router = express.Router();
 
+// Get urgent requests
+router.get('/urgent', requireAuth, async (req, res) => {
+  try {
+    const urgentRequests = await Request.find({
+      status: 'Approved',
+      urgency: { $in: ['High', 'Critical'] }
+    })
+    .populate('campId', 'campName location')
+    .sort({ createdAt: -1 })
+    .limit(10);
+
+    const formattedRequests = urgentRequests.map(request => ({
+      _id: request._id,
+      itemName: request.items[0].name,
+      quantity: request.items[0].quantity,
+      unit: request.items[0].unit,
+      campId: request.campId._id,
+      campName: request.campId.campName,
+      urgency: request.urgency
+    }));
+
+    res.json(formattedRequests);
+  } catch (error) {
+    console.error('Error fetching urgent requests:', error);
+    res.status(500).json({ error: 'Failed to fetch urgent requests' });
+  }
+});
+
 // Get all requests
 router.get('/', requireAuth, async (req, res) => {
   try {
