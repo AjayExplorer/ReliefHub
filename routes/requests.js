@@ -17,7 +17,33 @@ router.get('/urgent', requireAuth, async (req, res) => {
     .sort({ createdAt: -1 })
     .limit(10);
 
-    const formattedRequests = urgentRequests.map(request => ({
+    // Get all delivered donations to check fulfillment
+    const Donation = require('../models/Donation');
+    const deliveredDonations = await Donation.find({
+      status: 'Delivered'
+    }).populate('campId', '_id');
+
+    // Filter out requests that have been fulfilled by delivered donations
+    const unfulfilledRequests = urgentRequests.filter(request => {
+      const campDeliveredDonations = deliveredDonations.filter(donation => 
+        donation.campId._id.toString() === request.campId._id.toString()
+      );
+      
+      // Check if any delivered donation fulfills this request's items
+      const isFulfilled = request.items.some(requestItem => {
+        return campDeliveredDonations.some(donation => 
+          donation.items.some(donationItem => 
+            donationItem.name.toLowerCase() === requestItem.name.toLowerCase() &&
+            donationItem.quantity >= requestItem.quantity &&
+            donationItem.unit.toLowerCase() === requestItem.unit.toLowerCase()
+          )
+        );
+      });
+      
+      return !isFulfilled;
+    });
+
+    const formattedRequests = unfulfilledRequests.map(request => ({
       _id: request._id,
       itemName: request.items[0].name,
       quantity: request.items[0].quantity,
@@ -109,37 +135,46 @@ router.post('/', [requireAuth, requireRole(['CampOfficial'])], [
   }
 });
 
-// Get single request by ID (for donors to prefill donation form)
+// Get single request by ID
 router.get('/:id', requireAuth, async (req, res) => {
   try {
     const request = await Request.findById(req.params.id)
-      .populate('campId', 'campName location');
+      .populate('campId', 'campName location')
+      .populate('raisedBy', 'username role')
+      .populate('approvedBy', 'username');
 
     if (!request) {
       return res.status(404).json({ error: 'Request not found' });
     }
 
-    // Return a simplified shape that the frontend expects
-    const firstItem = request.items && request.items.length > 0 ? request.items[0] : null;
-    const response = firstItem ? {
-      _id: request._id,
-      itemName: firstItem.name,
-      quantity: firstItem.quantity,
-      unit: firstItem.unit,
-      campId: request.campId._id,
-      campName: request.campId.campName,
-      type: request.type,
-      urgency: request.urgency
-    } : {
-      _id: request._id,
-      campId: request.campId._id,
-      campName: request.campId.campName,
-      type: request.type,
-      urgency: request.urgency,
-      items: request.items
-    };
+    // Check if this is a request for donation prefill (from donor dashboard)
+    const isDonationPrefill = req.query.prefill === 'true';
+    
+    if (isDonationPrefill) {
+      // Return simplified shape for donation prefill
+      const firstItem = request.items && request.items.length > 0 ? request.items[0] : null;
+      const response = firstItem ? {
+        _id: request._id,
+        itemName: firstItem.name,
+        quantity: firstItem.quantity,
+        unit: firstItem.unit,
+        campId: request.campId._id,
+        campName: request.campId.campName,
+        type: request.type,
+        urgency: request.urgency
+      } : {
+        _id: request._id,
+        campId: request.campId._id,
+        campName: request.campId.campName,
+        type: request.type,
+        urgency: request.urgency,
+        items: request.items
+      };
+      return res.json(response);
+    }
 
-    res.json(response);
+    // Return full request object for official dashboard
+    res.json(request);
   } catch (error) {
     console.error('Error fetching request:', error);
     res.status(500).json({ error: 'Failed to fetch request' });
@@ -172,6 +207,28 @@ router.put('/:id/status', [requireAuth, requireRole(['Collector'])], [
   } catch (error) {
     console.error('Error updating request status:', error);
     res.status(500).json({ error: 'Failed to update request status' });
+  }
+});
+
+// Delete request (Camp Official only - can delete their own requests)
+router.delete('/:id', requireAuth, async (req, res) => {
+  try {
+    const request = await Request.findById(req.params.id);
+    
+    if (!request) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+
+    // Check if user is the creator of the request or has appropriate role
+    if (request.raisedBy.toString() !== req.session.userId && req.session.role !== 'Collector') {
+      return res.status(403).json({ error: 'Not authorized to delete this request' });
+    }
+
+    await Request.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Request deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting request:', error);
+    res.status(500).json({ error: 'Failed to delete request' });
   }
 });
 

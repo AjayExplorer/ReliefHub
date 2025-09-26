@@ -4,6 +4,10 @@ let userCamp = null;
 document.addEventListener('DOMContentLoaded', function() {
     checkAuthentication();
     setupSidebarNavigation();
+    
+    // Make functions globally accessible after DOM is loaded
+    window.deleteRequest = deleteRequest;
+    window.showRequestItems = showRequestItems;
 });
 
 async function checkAuthentication() {
@@ -275,12 +279,35 @@ async function loadRequestsData() {
                 <td><span class="badge bg-${getStatusColor(request.status)}">${request.status}</span></td>
                 <td>${new Date(request.createdAt).toLocaleDateString()}</td>
                 <td>
-                    <button class="btn btn-sm btn-outline-primary" onclick="showRequestItems('${request._id}', '${request.title}')">
-                        <i class="fas fa-list"></i> View Items
-                    </button>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-primary me-1 view-request-btn" data-request-id="${request._id}" data-request-title="${request.title.replace(/"/g, '&quot;')}">
+                            <i class="fas fa-list"></i> View Items
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger delete-request-btn" data-request-id="${request._id}" data-request-title="${request.title.replace(/"/g, '&quot;')}">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
                 </td>
             </tr>
         `).join('');
+        
+        // Add event listeners for the buttons
+        document.querySelectorAll('.view-request-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const requestId = this.getAttribute('data-request-id');
+                const requestTitle = this.getAttribute('data-request-title');
+                showRequestItems(requestId, requestTitle);
+            });
+        });
+        
+        document.querySelectorAll('.delete-request-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const requestId = this.getAttribute('data-request-id');
+                const requestTitle = this.getAttribute('data-request-title');
+                console.log('Delete button clicked via event listener');
+                deleteRequest(requestId, requestTitle);
+            });
+        });
         
     } catch (error) {
         console.error('Error loading requests:', error);
@@ -504,6 +531,9 @@ async function createRequest() {
 }
 
 function getStatusColor(status) {
+    if (!status || typeof status !== 'string') {
+        return 'secondary';
+    }
     switch (status.toLowerCase()) {
         case 'pending': return 'warning';
         case 'approved': return 'info';
@@ -829,6 +859,131 @@ async function removeInventoryItem(index) {
         }
     } catch (error) {
         console.error('Error removing inventory item:', error);
+        showAlert('Network error. Please try again.', 'danger');
+    }
+}
+
+async function showRequestItems(requestId, requestTitle) {
+    try {
+        // Get request details
+        const response = await fetch(`/api/requests/${requestId}`);
+        if (!response.ok) {
+            if (response.status === 404) {
+                showAlert('Request not found. It may have been deleted.', 'warning');
+                loadRequestsData(); // Refresh the table
+                return;
+            }
+            throw new Error('Failed to fetch request details');
+        }
+        const request = await response.json();
+        
+        const modalHtml = `
+            <div class="modal fade" id="viewRequestModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Request Items - ${requestTitle}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <p><strong>Type:</strong> ${request.type}</p>
+                                    <p><strong>Urgency:</strong> <span class="badge bg-${request.urgency === 'Critical' ? 'danger' : request.urgency === 'High' ? 'warning' : 'info'}">${request.urgency}</span></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Status:</strong> <span class="badge bg-${getStatusColor(request.status)}">${request.status}</span></p>
+                                    <p><strong>Created:</strong> ${new Date(request.createdAt).toLocaleDateString()}</p>
+                                </div>
+                            </div>
+                            ${request.description ? `<p><strong>Description:</strong> ${request.description}</p>` : ''}
+                            <h6>Requested Items:</h6>
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Item Name</th>
+                                            <th>Quantity</th>
+                                            <th>Unit</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${request.items.map(item => `
+                                            <tr>
+                                                <td>${item.name}</td>
+                                                <td>${item.quantity}</td>
+                                                <td>${item.unit}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Remove existing modal if any
+        const existingModal = document.getElementById('viewRequestModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Add new modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Show the modal
+        const modal = new bootstrap.Modal(document.getElementById('viewRequestModal'));
+        modal.show();
+    } catch (error) {
+        console.error('Error loading request items:', error);
+        showAlert('Error loading request items', 'danger');
+    }
+}
+
+async function deleteRequest(requestId, requestTitle) {
+    console.log('Delete request called with ID:', requestId, 'Title:', requestTitle);
+    
+    if (!confirm(`Are you sure you want to delete the request "${requestTitle}"? This action cannot be undone.`)) {
+        console.log('User cancelled deletion');
+        return;
+    }
+
+    try {
+        console.log('Sending DELETE request to:', `/api/requests/${requestId}`);
+        const response = await fetch(`/api/requests/${requestId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        console.log('Delete response status:', response.status);
+        
+        if (response.ok) {
+            const result = await response.json();
+            console.log('Delete successful:', result);
+            showAlert('Request deleted successfully!', 'success');
+            loadRequestsData(); // Refresh the requests table
+            loadOverviewData(); // Refresh overview statistics
+        } else {
+            const data = await response.json();
+            console.log('Delete failed:', data);
+            if (response.status === 404) {
+                showAlert('Request not found. It may have already been deleted.', 'warning');
+                loadRequestsData(); // Refresh the table
+            } else if (response.status === 403) {
+                showAlert('You are not authorized to delete this request.', 'danger');
+            } else {
+                showAlert(data.error || 'Failed to delete request', 'danger');
+            }
+        }
+    } catch (error) {
+        console.error('Error deleting request:', error);
         showAlert('Network error. Please try again.', 'danger');
     }
 }
